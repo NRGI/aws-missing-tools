@@ -43,6 +43,7 @@ get_EBS_List() {
   esac
   #creates a list of all ebs volumes that match the selection string from above
   ebs_backup_list=$(aws ec2 describe-volumes --region $region $ebs_selection_string --output text --query 'Volumes[*].VolumeId')
+  echo "Backing up volumes - $ebs_backup_list"
   #takes the output of the previous command 
   ebs_backup_list_result=$(echo $?)
   if [[ $ebs_backup_list_result -gt 0 ]]; then
@@ -203,8 +204,10 @@ get_EBS_List
 
 #the loop below is called once for each volume in $ebs_backup_list - the currently selected EBS volume is passed in as "ebs_selected"
 for ebs_selected in $ebs_backup_list; do
-  ec2_snapshot_description="ec2ab_${ebs_selected}_$current_date"
+  ec2_instance_id=$(aws ec2 describe-volumes --volume-ids $ebs_selected | jq '.Volumes[0].Attachments[0].InstanceId')
+  ec2_snapshot_description="ec2ab_${ec2_instance_id:1: -1}_$current_date"
   ec2_snapshot_resource_id=$(aws ec2 create-snapshot --region $region --description $ec2_snapshot_description --volume-id $ebs_selected --output text --query SnapshotId 2>&1)
+  echo "Snapshoting volume $ebs_selected attached to instance ${ec2_instance_id:1: -1}"
   if [[ $? != 0 ]]; then
     echo -e "An error occurred when running ec2-create-snapshot. The error returned is below:\n$ec2_create_snapshot_result" 1>&2 ; exit 70
   fi  
