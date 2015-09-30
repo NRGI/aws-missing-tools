@@ -53,7 +53,7 @@ get_EBS_List() {
 
 create_EBS_Snapshot_Tags() {
   #snapshot tags holds all tags that need to be applied to a given snapshot - by aggregating tags we ensure that ec2-create-tags is called only onece
-  snapshot_tags=""
+  snapshot_tags="Key=ec2_id,Value=${ec2_instance_id:1:-1} Key=volume_id,Value=$ebs_selected Key=date,Value=$current_date"
   #if $name_tag_create is true then append ec2ab_${ebs_selected}_$current_date to the variable $snapshot_tags
   if $name_tag_create; then
     snapshot_tags="$snapshot_tags Key=Name,Value=ec2ab_${ebs_selected}_$current_date"
@@ -205,7 +205,8 @@ get_EBS_List
 #the loop below is called once for each volume in $ebs_backup_list - the currently selected EBS volume is passed in as "ebs_selected"
 for ebs_selected in $ebs_backup_list; do
   ec2_instance_id=$(aws ec2 describe-volumes --volume-ids $ebs_selected | jq '.Volumes[0].Attachments[0].InstanceId')
-  ec2_snapshot_description="ec2ab_${ec2_instance_id:1: -1}_$current_date"
+  ec2_snapshot_description="Automated_backup_of_ec2_instance_${ec2_instance_id:1:-1}_made_on_$current_date"
+  # ec2_snapshot_description="ec2ab_${ec2_instance_id:1: -1}_$current_date"
   ec2_snapshot_resource_id=$(aws ec2 create-snapshot --region $region --description $ec2_snapshot_description --volume-id $ebs_selected --output text --query SnapshotId 2>&1)
   echo "Snapshoting volume $ebs_selected attached to instance ${ec2_instance_id:1: -1}"
   if [[ $? != 0 ]]; then
